@@ -1,0 +1,7 @@
+pydicom
+matplotlib
+opencv-python
+flask
+pillow
+numpy
+tk
