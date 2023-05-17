@@ -5,7 +5,7 @@ import pydicom
 import pylab as pl
 import sys
 import matplotlib.path as mplPath
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 
 """
 Simple DICOM reader.  Read the DICOM file and display the data and images.
@@ -20,12 +20,21 @@ class DicomReader:
         """
         self.file_path = file_path
 
-        self.fig, self.ax = plt.subplots(1,1)
+        self.fig = None
+        self.ax = None
 
         if os.path.exists(file_path):
             self.ds = pydicom.dcmread(file_path)
         else:
             print("File does not exist")
+
+    def init_figure(self) -> None:
+        """
+        Initialize the figure and axis.
+        Check if it has already been initialized.
+        """
+        if self.fig is None or self.ax is None:
+            self.fig, self.ax = plt.subplots(1,1)
 
     def display_details(self) -> None:
         """
@@ -54,6 +63,9 @@ class DicomReader:
         then the middle slice is chosen.
         @param indice: Which slice to display.
         """
+        # Init figure
+        self.init_figure()
+
         # Validate the indice
         # Select the middle indice if none is given or if bad
         if indice < 0 or indice > self.ds.pixel_array.shape[2]:
@@ -66,11 +78,17 @@ class DicomReader:
         plt.imshow(pix[:, :, indice])
         plt.show()
 
-    def animate_slices(self) -> None:
+    def animate_slices(self, save_to_mp4: bool = False, save_to_html5: bool = False) -> None:
         """
         Make an animation of all the slices.
         This will play through all the availables slices.
+
+        @param: save_to_mp4: Save the video to MP4 video format if True.
+        @param: save_to_html5: Save the video to HTML5 video format if True.
         """
+
+        # Init figure
+        self.init_figure()
 
         # Initialize the image
         img = self.ax.imshow(self.ds.pixel_array[:, :, 0])
@@ -79,10 +97,23 @@ class DicomReader:
 
         # Call the matplotlib animation fuction 
         # to call animate to display all the slices
-        ani = FuncAnimation(self.fig, self.animate, frames=self.ds.pixel_array.shape[2], interval=100, repeat=False)
+        anim = FuncAnimation(self.fig, self.animate, frames=self.ds.pixel_array.shape[2], interval=100, repeat=False)
 
-        # Display the animate plot
-        plt.show()
+        if save_to_mp4:
+            # saving to m4 using ffmpeg writer
+            writervideo = FFMpegWriter(fps=6)
+            anim.save(self.file_path + '.mp4', writer=writervideo)
+            plt.close()
+
+        if save_to_html5:
+            # converting to an html5 video
+            video = anim.to_html5_video()
+            print(video)
+            plt.close()
+
+        if not save_to_mp4 and not save_to_html5:
+            # Display the animate plot
+            plt.show()
 
     def animate(self, ind):
         """
@@ -102,5 +133,6 @@ if __name__ == "__main__":
         dicom_reader = DicomReader(filename)
         dicom_reader.display_details()
         #dicom_reader.display_image()
-        dicom_reader.animate_slices()
+        #dicom_reader.animate_slices(save_to_mp3=True)
+        dicom_reader.animate_slices(save_to_html5=True)
 

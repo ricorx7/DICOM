@@ -212,3 +212,4 @@ pip-selfcheck.json
 *.png
 static/*
 *.DS_Store
+*.mp4
